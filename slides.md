@@ -131,7 +131,16 @@ def handler(event:, context:)
 end
 ```
 
-Now we can get the lambda function created and have it use the code we just wrote. In our `lib/demo1-stack.ts` file below our S3 bucket lets add the following:
+Now we can get the lambda function created and have it use the code we just wrote. In our `lib/demo1-stack.ts` file at the top add:
+^ TODO: Explain these more
+```
+import * as lambda from 'aws-cdk-lib/aws-lambda';
+import * as path from 'path';
+import { Duration } from 'aws-cdk-lib';
+```
+
+
+Now below our S3 bucket lets add the following:
 
 ```
 const lambdaFn = new lambda.Function(this, 'MyLambda', {
@@ -144,6 +153,12 @@ const lambdaFn = new lambda.Function(this, 'MyLambda', {
   timeout: Duration.seconds(10),
 });
 ```
+
+Let's deploy this out, generate our diff first then deploy
+
+Now we can try and run the funcation in the UI
+
+Oops needs permissions to write to the bucket. This is where we learn that eventhough our code deploys fine it may not "work" as expected
 
 # Demo 2
 ## Multiple Stack Project
