@@ -1,5 +1,7 @@
 # Who am I
 
+I'm good with the cloud and just ok with Typescript
+
 ---
 
 # What is CDK
@@ -160,5 +162,125 @@ Now we can try and run the funcation in the UI
 
 Oops needs permissions to write to the bucket. This is where we learn that eventhough our code deploys fine it may not "work" as expected
 
+Let's add `bucket.grantWrite(lambdaFn);` and then re-diff and deploy
+
+Now we can create a test event and trigger our Lamda.
+
 # Demo 2
 ## Multiple Stack Project
+
+Next we're gonna build a stack to host a speed test.
+
+We'll create the following:
+* VPC, with subnets
+* Application Load Balancer (ELB)
+* ECS Fargate Cluster
+* ECS Fargate Task (To run https://hub.docker.com/r/adolfintel/speedtest)
+* S3 Bucket for Logging
+
+```
+mkdir demo2
+cd demo2
+cdk init app --language typescript
+```
+
+Remove the default stack from `bin/demo2.ts`, start with the import
+
+```
+import { Demo2Stack } from '../lib/demo2-stack';
+```
+
+and then move do the decleration
+
+```
+new Demo2Stack(app, 'Demo2Stack', {
+  /* If you don't specify 'env', this stack will be environment-agnostic.
+   * Account/Region-dependent features and context lookups will not work,
+   * but a single synthesized template can be deployed anywhere. */
+
+  /* Uncomment the next line to specialize this stack for the AWS Account
+   * and Region that are implied by the current CLI configuration. */
+  // env: { account: process.env.CDK_DEFAULT_ACCOUNT, region: process.env.CDK_DEFAULT_REGION },
+
+  /* Uncomment the next line if you know exactly what Account and Region you
+   * want to deploy the stack to. */
+  // env: { account: '123456789012', region: 'us-east-1' },
+
+  /* For more information, see https://docs.aws.amazon.com/cdk/latest/guide/environments.html */
+});
+```
+
+Finally remove `lib/demo2-stack.ts` as well.
+
+Now we'll start by adding our `lib/vpc-stack.ts` file and filling it out.
+
+We're goig to change things up a bit here and import from `constructs` and `aws-cdk-lib`
+
+```
+import { Construct } from 'constructs';
+import * as cdk from 'aws-cdk-lib';
+
+export class VPCStack extends cdk.Stack {
+  constructor(scope: Construct, id: string, props?: cdk.StackProps) {
+    super(scope, id, props);
+  }
+}
+```
+The `scope` parameter represents the parent construct in which this stack will be defined. It is of type Construct, which is a base class for all constructs in the CDK.
+
+We're gonna build our VPC stack and need to share information about it to other constructs we build for this project. It's a little foresight into what we are doing
+
+I may be great with the cloud, but at times my deep explainations of specifics around languages such as javascript are not perfect!
+
+Moving on, we'll want to add all the parts of a VPC
+
+```
+import { Construct } from 'constructs';
+import * as cdk from 'aws-cdk-lib';
+import * as ec2 from 'aws-cdk-lib/aws-ec2'
+
+export class VPCStack extends cdk.Stack {
+  // 👇 set a property for the vpc
+  public readonly vpc: ec2.Vpc;
+
+  constructor(scope: Construct, id: string, props?: cdk.StackProps) {
+    super(scope, id, props);
+    this.vpc = new ec2.Vpc(
+      this,
+      'Vpc',
+      {
+        vpcName: 'Demo',
+        ipAddresses: ec2.IpAddresses.cidr('192.168.0.0/16'),
+        natGateways: 1,
+        maxAzs: 2,
+        subnetConfiguration: [
+          {
+            name: 'Public',
+            subnetType: ec2.SubnetType.PUBLIC,
+            cidrMask: 24
+          },
+          {
+            name: 'Private',
+            subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS,
+            cidrMask: 24
+          }
+        ]
+      }
+    );
+  }
+}
+```
+
+Then we can create the "VPC Stack"
+
+```
+import { VPCStack } from '../lib/vpc-stack';
+
+const vpcStack = new VPCStack(app, 'vpc-stack', {
+  stackName: 'vpc-stack'
+})
+```
+
+With that all in place we should be able to do a `cdk deploy --all` and have our stack build with a VPC!
+
+
